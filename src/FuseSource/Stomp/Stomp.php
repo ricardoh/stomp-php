@@ -341,7 +341,7 @@ class Stomp
         } else if ($this->brokerVendor == 'RMQ') {
             $headers['prefetch-count'] = $this->prefetchSize;
         }
-		
+
         if ($this->clientId != null) {
             if ($this->brokerVendor == 'AMQ') {
                 $headers['activemq.subscriptionName'] = $this->clientId;
@@ -484,6 +484,40 @@ class Stomp
             }
             $headers['message-id'] = $message;
             $frame = new Frame('ACK', $headers);
+            $this->_writeFrame($frame);
+            return true;
+        }
+    }
+    /**
+     * Not acknowledge consumption of a message from a subscription
+     * Note: This operation is always asynchronous
+     *
+     * @param string|Frame $messageMessage ID
+     * @param string $transactionId
+     * @return boolean
+     * @throws StompException
+     */
+    public function nack ($message, $transactionId = null)
+    {
+        if ($message instanceof Frame) {
+            $headers = $message->headers;
+            if (isset($transactionId)) {
+                $headers['transaction'] = $transactionId;
+            }
+
+            if ($this->brokerVendor == 'RMQ') {
+                unset($headers['content-length']);
+            }
+            $frame = new Frame('NACK', $headers);
+            $this->_writeFrame($frame);
+            return true;
+        } else {
+            $headers = array();
+            if (isset($transactionId)) {
+                $headers['transaction'] = $transactionId;
+            }
+            $headers['message-id'] = $message;
+            $frame = new Frame('NACK', $headers);
             $this->_writeFrame($frame);
             return true;
         }
